@@ -1,0 +1,19 @@
+schema_version: 1
+
+http_checks:
+  - id: "example-api"
+    url: "http://localhost:8080/health"
+    interval: "30s"
+    timeout: "5s"
+    expect:
+      status: 200
+      json:
+        - pointer: "/status"
+          operator: "eq"
+          value: "healthy"
+        - pointer: "/dependencies/database/ready"
+          operator: "eq"
+          value: true
+    alert:
+      failures: 3
+      recovery_successes: 2

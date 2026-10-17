@@ -1,0 +1,20 @@
+[Unit]
+Description=Personal server monitoring
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=pi-monitor
+Group=pi-monitor
+ExecStart=/usr/local/bin/pi-monitor run --config /etc/pi-monitor/config.yaml
+Restart=on-failure
+RestartSec=10s
+TimeoutStopSec=30s
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

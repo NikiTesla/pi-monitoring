@@ -1,0 +1,30 @@
+name: CI
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.24.x', 'stable']
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+          cache-dependency-path: go.sum
+      - name: Formatting
+        run: test -z "$(gofmt -l cmd internal)"
+      - run: go mod download
+      - run: go mod verify
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go test -race ./...
+      - name: Linux builds
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=readonly -trimpath -o /tmp/pi-monitor-amd64 ./cmd/pi-monitor
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -mod=readonly -trimpath -o /tmp/pi-monitor-arm64 ./cmd/pi-monitor

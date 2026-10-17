@@ -1,0 +1,10 @@
+// Optional administrator-installed policy for the dedicated service account.
+// Exact actions only: do not grant shutdown, arbitrary unit control or the
+// ability to ignore shutdown inhibitors.
+polkit.addRule(function(action, subject) {
+    if (subject.user == "pi-monitor" &&
+        (action.id == "org.freedesktop.login1.reboot" ||
+         action.id == "org.freedesktop.login1.reboot-multiple-sessions")) {
+        return polkit.Result.YES;
+    }
+});
