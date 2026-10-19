@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 )
 
 func TestRulesRequireContinuousFailureAndRecovery(t *testing.T) {

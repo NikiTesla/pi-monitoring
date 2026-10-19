@@ -2,11 +2,15 @@
 
 Status: proposed MVP design for a standalone Go application.
 
-Implementation has started in this repository. See [implementation status](implementation.md) for the supported milestone and remaining work. The product design below includes future behavior; actual systemd installation/start remains unavailable. The initial foreground runtime keeps state in memory and does not yet implement the proposed durable storage/outbox.
+See [implementation status](implementation.md) for the supported milestone and
+remaining work, and [architecture](architecture.md) for the current code. This
+document includes future behavior. The Makefile installs/enables a systemd unit
+and starts it separately; CLI service installation remains unavailable. The
+runtime keeps state in memory without the proposed durable storage/outbox.
 
 Updated: 2026-10-15.
 
-Working name: `pi-monitor`; final project name is undecided.
+Project: `pi-monitoring`; command: `pi-monitor`.
 
 ## 1. Product direction
 

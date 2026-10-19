@@ -1,30 +1,54 @@
 name: CI
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 6 * * 1'
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
-        go: ['1.24.x', 'stable']
+        go: ['1.24.x', 'oldstable', 'stable']
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ matrix.go }}
           check-latest: true
           cache-dependency-path: go.sum
       - name: Formatting
         run: test -z "$(gofmt -l cmd internal)"
+      - name: Modern Go idioms
+        if: matrix.go == 'stable'
+        run: go fix -diff ./...
       - run: go mod download
       - run: go mod verify
-      - run: go test ./...
+      - run: go test -timeout 60s ./...
       - run: go vet ./...
-      - run: go test -race ./...
+      - run: go test -race -timeout 60s ./...
       - name: Linux builds
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=readonly -trimpath -o /tmp/pi-monitor-amd64 ./cmd/pi-monitor
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -mod=readonly -trimpath -o /tmp/pi-monitor-arm64 ./cmd/pi-monitor
+  vulnerabilities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          check-latest: true
+      - run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...

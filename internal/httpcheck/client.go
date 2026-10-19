@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 )
 
 // Reuse connections between checks. There is no cookie jar or shared auth state.

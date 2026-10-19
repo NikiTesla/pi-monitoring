@@ -41,7 +41,7 @@ func TestUpdatesDecodeAndPolling(t *testing.T) {
 		}
 		io.WriteString(w, `{"ok":true,"result":[{"update_id":13,"message":{"message_id":5,"date":1800000000,"from":{"id":7,"is_bot":false},"chat":{"id":-9},"text":"/status"}},{"update_id":14}]}`)
 	})
-	updates, err := client.Updates(context.Background(), 13)
+	updates, err := client.Updates(t.Context(), 13)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func TestGetMe(t *testing.T) {
 		}
 		io.WriteString(w, `{"ok":true,"result":{"id":7,"is_bot":true,"username":"fixture_bot"}}`)
 	})
-	user, err := client.GetMe(context.Background())
+	user, err := client.GetMe(t.Context())
 	if err != nil || user.ID != 7 || user.Username != "fixture_bot" {
 		t.Fatalf("user = %+v, error = %v", user, err)
 	}
@@ -88,7 +88,7 @@ func TestSetCommandMenu(t *testing.T) {
 		}
 		io.WriteString(w, `{"ok":true,"result":true}`)
 	})
-	err := client.SetCommandMenu(context.Background(), []BotCommand{{Command: "status", Description: "Server overview"}})
+	err := client.SetCommandMenu(t.Context(), []BotCommand{{Command: "status", Description: "Server overview"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +115,7 @@ func TestCommandMenuFailures(t *testing.T) {
 					}
 					io.WriteString(w, `{"ok":true,"result":true}`)
 				})
-				err := client.SetCommandMenu(context.Background(), []BotCommand{{Command: "help", Description: "Help"}})
+				err := client.SetCommandMenu(t.Context(), []BotCommand{{Command: "help", Description: "Help"}})
 				if err == nil || strings.Contains(err.Error(), "test-token") || strings.Contains(err.Error(), "private detail") {
 					t.Fatalf("unsafe or missing error: %v", err)
 				}
@@ -160,7 +160,7 @@ func TestSendPlainBoundedText(t *testing.T) {
 				}
 				io.WriteString(w, `{"ok":true,"result":{"message_id":1}}`)
 			})
-			if err := client.Send(context.Background(), 7, text); err != nil {
+			if err := client.Send(t.Context(), 7, text); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -183,7 +183,7 @@ func TestResponseFailuresDoNotExposeSecrets(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			client := fixtureClient(t, func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(test.status); io.WriteString(w, test.body) })
-			_, err := client.Updates(context.Background(), 0)
+			_, err := client.Updates(t.Context(), 0)
 			if err == nil || strings.Contains(err.Error(), "test-token") || strings.Contains(err.Error(), "private response") {
 				t.Fatalf("unsafe or missing error: %v", err)
 			}
@@ -196,7 +196,7 @@ func TestRateLimit(t *testing.T) {
 		w.WriteHeader(http.StatusTooManyRequests)
 		io.WriteString(w, `{"ok":false,"parameters":{"retry_after":17}}`)
 	})
-	err := client.Send(context.Background(), 7, "fixture")
+	err := client.Send(t.Context(), 7, "fixture")
 	var rateLimit *RetryAfter
 	if !errors.As(err, &rateLimit) || rateLimit.Delay != 17*time.Second {
 		t.Fatalf("rate limit = %v", err)
@@ -210,7 +210,7 @@ func TestRedirectIsNotFollowed(t *testing.T) {
 	client := fixtureClient(t, func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, target.URL, http.StatusTemporaryRedirect)
 	})
-	if err := client.Send(context.Background(), 7, "fixture"); err == nil {
+	if err := client.Send(t.Context(), 7, "fixture"); err == nil {
 		t.Fatal("accepted redirect")
 	}
 	if followed.Load() {
@@ -231,7 +231,7 @@ func TestCancellationAndTransportRedaction(t *testing.T) {
 		case <-release:
 		}
 	})
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	finished := make(chan error, 1)
 	go func() { _, err := client.Updates(ctx, 0); finished <- err }()
@@ -252,7 +252,7 @@ func TestCancellationAndTransportRedaction(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	client.baseURL = server.URL
 	server.Close()
-	_, err := client.GetMe(context.Background())
+	_, err := client.GetMe(t.Context())
 	if err == nil || strings.Contains(err.Error(), "test-token") {
 		t.Fatalf("transport error = %v", err)
 	}
@@ -261,17 +261,17 @@ func TestCancellationAndTransportRedaction(t *testing.T) {
 func TestInvalidRequestsStayLocal(t *testing.T) {
 	client := New("test-token")
 	client.baseURL = ":invalid"
-	if _, err := client.Updates(context.Background(), -1); err == nil {
+	if _, err := client.Updates(t.Context(), -1); err == nil {
 		t.Error("accepted negative offset")
 	}
-	if err := client.Send(context.Background(), 0, "fixture"); err == nil {
+	if err := client.Send(t.Context(), 0, "fixture"); err == nil {
 		t.Error("accepted missing destination")
 	}
-	if err := client.Send(context.Background(), 7, " "); err == nil {
+	if err := client.Send(t.Context(), 7, " "); err == nil {
 		t.Error("accepted blank message")
 	}
 	client.token = "token/other-path"
-	if _, err := client.GetMe(context.Background()); err == nil || strings.Contains(err.Error(), client.token) {
+	if _, err := client.GetMe(t.Context()); err == nil || strings.Contains(err.Error(), client.token) {
 		t.Fatalf("unsafe credential error: %v", err)
 	}
 }

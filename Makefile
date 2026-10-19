@@ -53,6 +53,10 @@ install-service: build
 	@if sudo test -e /etc/pi-monitor/config.yaml; then sudo test -f /etc/pi-monitor/config.yaml; fi
 	@if sudo test -e /etc/pi-monitor/secrets.env; then sudo test -f /etc/pi-monitor/secrets.env; fi
 	@if sudo test -e /etc/systemd/system/pi-monitor.service; then sudo test -f /etc/systemd/system/pi-monitor.service; fi
+	@if sudo test -e /etc/systemd/system/pi-monitor.service; then \
+	  sudo cmp -s deploy/pi-monitor.service /etc/systemd/system/pi-monitor.service || \
+	  { printf '%s\n' 'Existing service unit differs. Review and merge deploy/pi-monitor.service manually before retrying.' >&2; exit 1; }; \
+	fi
 	@if ! sudo test -f /etc/pi-monitor/config.yaml; then ./bin/pi-monitor validate --config "$(CONFIG)"; fi
 	@if ! id -u pi-monitor >/dev/null 2>&1; then sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin pi-monitor; fi
 	sudo install -d -o root -g pi-monitor -m 0750 /etc/pi-monitor
@@ -83,6 +87,10 @@ install-reboot-policy:
 	sudo test ! -L /etc/polkit-1/rules.d
 	sudo test ! -L /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules
 	@if sudo test -e /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules; then sudo test -f /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules; fi
+	@if sudo test -e /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules; then \
+	  sudo cmp -s deploy/50-pi-monitor-reboot.rules /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules || \
+	  { printf '%s\n' 'Existing reboot policy differs. Review and merge deploy/50-pi-monitor-reboot.rules manually before retrying.' >&2; exit 1; }; \
+	fi
 	sudo install -o root -g root -m 0644 deploy/50-pi-monitor-reboot.rules /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules
 	@printf '%s\n' 'Reboot policy installed. Enable telegram.allow_reboot in the deployed config and restart monitoring to use /reboot.'
 

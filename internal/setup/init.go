@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 )
 
 type InitOptions struct {

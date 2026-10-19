@@ -4,8 +4,8 @@ package monitor
 import (
 	"time"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/httpcheck"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/httpcheck"
 )
 
 type checkState struct {

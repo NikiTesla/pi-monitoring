@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 type sender interface {

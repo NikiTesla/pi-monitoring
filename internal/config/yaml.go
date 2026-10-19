@@ -26,8 +26,7 @@ func (d *Duration) UnmarshalYAML(node *yaml.Node) error {
 	if len(text) > 64 {
 		return errors.New("duration is too long")
 	}
-	if strings.HasSuffix(text, "d") {
-		dayText := strings.TrimSuffix(text, "d")
+	if dayText, ok := strings.CutSuffix(text, "d"); ok {
 		if !dayDurationPattern.MatchString(dayText) {
 			return fmt.Errorf("invalid duration %q", text)
 		}

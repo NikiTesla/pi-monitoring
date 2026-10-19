@@ -5,13 +5,13 @@ import (
 	"errors"
 	"io"
 	"log"
-	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 func rebootFixture() runtime {
@@ -200,7 +200,7 @@ func TestRebootStalePromptAndBusyWorker(t *testing.T) {
 func TestRebootWorkerReportsResultWithDeadline(t *testing.T) {
 	for _, failure := range []bool{false, true} {
 		control := rebootControl{requests: make(chan int64, 1), results: make(chan rebootResult, 1)}
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		var wantErr error
 		if failure {
@@ -236,7 +236,7 @@ func TestRebootWorkerReportsResultWithDeadline(t *testing.T) {
 
 func TestRebootWorkerCancelsActiveRequest(t *testing.T) {
 	control := rebootControl{requests: make(chan int64, 1), results: make(chan rebootResult, 1)}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	started, done := make(chan struct{}), make(chan struct{})
 	go func() {
@@ -264,7 +264,7 @@ func TestRebootWorkerCancelsActiveRequest(t *testing.T) {
 func TestCanceledRebootWorkerDoesNotExecuteQueuedRequest(t *testing.T) {
 	control := rebootControl{requests: make(chan int64, 1)}
 	control.requests <- 11
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	control.run(ctx, func(context.Context) error {
 		t.Fatal("canceled worker executed queued request")
@@ -274,9 +274,9 @@ func TestCanceledRebootWorkerDoesNotExecuteQueuedRequest(t *testing.T) {
 
 func TestHostRebootCommandIsFixed(t *testing.T) {
 	// Inspect only: this test must never start a real reboot command.
-	cmd := hostRebootCommand(context.Background())
+	cmd := hostRebootCommand(t.Context())
 	want := []string{"/usr/bin/systemctl", "--no-ask-password", "--no-wall", "reboot"}
-	if cmd.Path != want[0] || !reflect.DeepEqual(cmd.Args, want) || cmd.WaitDelay != time.Second {
+	if cmd.Path != want[0] || !slices.Equal(cmd.Args, want) || cmd.WaitDelay != time.Second {
 		t.Fatalf("unexpected reboot command: path=%q args=%v wait=%v", cmd.Path, cmd.Args, cmd.WaitDelay)
 	}
 }

@@ -23,7 +23,7 @@ component exists.
   `install-reboot-policy` installs the optional policy for the service account.
   Live reboot and target-host policy behavior remain unverified.
 - Local fixture tests, CI configuration and Linux ARM64/AMD64 packaging tooling
-  (project license and release verification still pending).
+  with an MIT license and third-party notices (release verification still pending).
 
 ## Runtime boundaries
 

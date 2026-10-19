@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 type commandMenuSetter interface {

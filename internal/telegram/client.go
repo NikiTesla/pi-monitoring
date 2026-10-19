@@ -210,14 +210,8 @@ func (c *Client) call(ctx context.Context, method string, input, result any) err
 		return errors.New("telegram: invalid response")
 	}
 	if response.StatusCode == http.StatusTooManyRequests || envelope.ErrorCode == http.StatusTooManyRequests {
-		seconds := envelope.Parameters.RetryAfter
 		// Bound untrusted duration conversion and prevent a tight retry loop.
-		if seconds < 1 {
-			seconds = 1
-		}
-		if seconds > 86400 {
-			seconds = 86400
-		}
+		seconds := min(max(envelope.Parameters.RetryAfter, 1), 86400)
 		return &RetryAfter{Delay: time.Duration(seconds) * time.Second}
 	}
 	if response.StatusCode != http.StatusOK {

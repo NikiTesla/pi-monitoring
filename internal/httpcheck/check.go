@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 )
 
 // Result describes one completed evaluation, including any sanitized failure.

@@ -2,12 +2,15 @@
 
 package host
 
-import "time"
+import (
+	"slices"
+	"time"
+)
 
 type Collector struct{ mounts []string }
 
 func New(mounts []string) *Collector {
-	return &Collector{mounts: append([]string(nil), mounts...)}
+	return &Collector{mounts: slices.Clone(mounts)}
 }
 
 func (c *Collector) Collect() Snapshot {

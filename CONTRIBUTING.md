@@ -3,7 +3,8 @@
 This is an early implementation of YAML configuration, setup planning, HTTP
 checks, Linux host metrics and Telegram alerts/commands. Read
 [the design](docs/design.md) and [implementation status](docs/implementation.md)
-before changing behavior. Persistent state, Docker and the dashboard remain future work.
+before changing behavior. [Architecture and decisions](docs/architecture.md) maps
+current packages and ownership. Persistent state, Docker and the dashboard remain future work.
 
 ## Naming and readability
 
@@ -32,6 +33,18 @@ should explain intent or a constraint; remove comments that only repeat the code
 Format Go code with `gofmt` and separate standard library and project/dependency
 imports. Prefer simple allocation improvements to clever code; measure before
 making performance claims.
+
+Use language and standard-library facilities available at the go.mod minimum.
+Prefer slices/maps operations to bespoke membership, copying and sorting loops
+where clearer. Go 1.22+ iteration variables declared with := need no capture
+rebinding; preserve actual fixture/state copies and explicitly reused variables.
+Use t.Context for test work and retain early cancellation/joining for workers.
+With Go 1.26+, `go fix -diff ./...` provides a modernization review; inspect its
+suggestions for behavior and compatibility before applying them. Newer APIs such
+as WaitGroup.Go require a separate decision to raise this project's Go 1.24 floor.
+
+CI runs the modernization diff check on stable Go. It does not edit files; review
+any suggested changes and test them at the declared minimum compiler version.
 
 ## Verification
 

@@ -10,4 +10,4 @@ code in the standard library's vendored x packages. Review notices again when
 updating dependencies or the release toolchain; optional native libraries or new
 dependencies can introduce additional obligations.
 
-The project's own license, once selected, applies to project code separately.
+The project's MIT license in LICENSE applies to project code separately.

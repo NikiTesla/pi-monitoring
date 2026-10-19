@@ -2,11 +2,12 @@ package monitor
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
-	"pi-monitoring/internal/host"
+	"github.com/NikiTesla/pi-monitoring/internal/host"
 )
 
 func observationTime(at time.Time) string {
@@ -54,12 +55,7 @@ func (r *runtime) incidentsSummary(now time.Time) string {
 		}
 	}
 	// Stable ordering keeps repeated status requests easy to compare.
-	ids := make([]string, 0, len(r.hostIncidents))
-	for id := range r.hostIncidents {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	for _, id := range ids {
+	for _, id := range slices.Sorted(maps.Keys(r.hostIncidents)) {
 		lines = append(lines, "Host · "+hostIncidentDetails(r.hostIncidents[id]))
 	}
 	if len(lines) == 0 {
@@ -104,9 +100,10 @@ func (r *runtime) hostSummary(now time.Time) string {
 	if s.ObservedAt.IsZero() {
 		return "💻 Host\n⚪ Metrics unavailable · No observation yet."
 	}
-	status := "💻 Host"
+	var status strings.Builder
+	status.WriteString("💻 Host")
 	if now.Sub(s.ObservedAt) > 2*r.settings.Host.Interval.Value() {
-		status += "\n🟠 Stale / unknown · Showing last observation"
+		status.WriteString("\n🟠 Stale / unknown · Showing last observation")
 	}
 	number := func(value *float64, unit string) string {
 		if value == nil {
@@ -114,22 +111,23 @@ func (r *runtime) hostSummary(now time.Time) string {
 		}
 		return fmt.Sprintf("%.1f%s", *value, unit)
 	}
-	status += "\nCPU: " + number(s.CPUPercent, "%")
-	status += "\nLoad (1 min): " + number(s.Load1, "")
-	status += "\nTemperature: " + number(s.TemperatureCelsius, " °C")
+	status.WriteString("\nCPU: " + number(s.CPUPercent, "%"))
+	status.WriteString("\nLoad (1 min): " + number(s.Load1, ""))
+	status.WriteString("\nTemperature: " + number(s.TemperatureCelsius, " °C"))
 	if s.MemoryAvailableBytes == nil || *s.MemoryAvailableBytes > s.MemoryTotalBytes {
-		status += "\nMemory used: unavailable"
+		status.WriteString("\nMemory used: unavailable")
 	} else {
 		used := s.MemoryTotalBytes - *s.MemoryAvailableBytes
-		status += fmt.Sprintf("\nMemory used: %d / %d MiB", used/(1<<20), s.MemoryTotalBytes/(1<<20))
+		fmt.Fprintf(&status, "\nMemory used: %d / %d MiB", used/(1<<20), s.MemoryTotalBytes/(1<<20))
 	}
 	for _, disk := range s.Disks {
-		status += "\nDisk " + disk.Mount + ": "
+		status.WriteString("\nDisk " + disk.Mount + ": ")
 		if disk.FreePercent == nil {
-			status += "unavailable"
+			status.WriteString("unavailable")
 		} else {
-			status += fmt.Sprintf("%.1f%% used", 100-*disk.FreePercent)
+			fmt.Fprintf(&status, "%.1f%% used", 100-*disk.FreePercent)
 		}
 	}
-	return status + "\nObserved: " + observationTime(s.ObservedAt)
+	status.WriteString("\nObserved: " + observationTime(s.ObservedAt))
+	return status.String()
 }

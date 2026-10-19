@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 )
 
 func evaluateJSONAssertion(root any, assertion config.JSONAssertion) (string, string) {
@@ -121,7 +121,7 @@ func resolveJSONPointer(root any, path string) (any, bool, bool) {
 		return nil, false, false
 	}
 	current := root
-	for _, part := range strings.Split(path[1:], "/") {
+	for part := range strings.SplitSeq(path[1:], "/") {
 		// Only ~0 and ~1 escapes are permitted. Decode after validating so ~01
 		// becomes the literal ~1 rather than being decoded twice.
 		for i := 0; i < len(part); i++ {

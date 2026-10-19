@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"log"
+	"slices"
 	"strings"
 	"time"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 type poller interface {
@@ -95,17 +96,8 @@ func waitRetry(ctx context.Context, delay time.Duration) bool {
 	}
 }
 
-func containsID(ids []int64, id int64) bool {
-	for _, allowed := range ids {
-		if id == allowed {
-			return true
-		}
-	}
-	return false
-}
-
 func (r *runtime) authorizedCommand(message *telegram.Message) (command, bool) {
-	if message == nil || message.From == nil || message.From.IsBot || message.SenderChat != nil || !containsID(r.settings.Telegram.AllowedChatIDs, message.Chat.ID) || !containsID(r.settings.Telegram.AllowedUserIDs, message.From.ID) {
+	if message == nil || message.From == nil || message.From.IsBot || message.SenderChat != nil || !slices.Contains(r.settings.Telegram.AllowedChatIDs, message.Chat.ID) || !slices.Contains(r.settings.Telegram.AllowedUserIDs, message.From.ID) {
 		return command{}, false
 	}
 	fields := strings.Fields(message.Text)

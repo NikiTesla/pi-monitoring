@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 type menuFixture struct {
@@ -39,14 +39,14 @@ func TestRegisterCommandMenu(t *testing.T) {
 		}
 		return nil
 	}}
-	registerCommandMenu(context.Background(), client, log.New(io.Discard, "", 0))
+	registerCommandMenu(t.Context(), client, log.New(io.Discard, "", 0))
 	if calls != 1 {
 		t.Fatalf("successful registration repeated: %d calls", calls)
 	}
 }
 
 func TestMenuRetryStopsOnCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	called := make(chan struct{})
 	client := menuFixture{set: func(context.Context, []telegram.BotCommand) error {
@@ -72,7 +72,7 @@ func TestMenuRetryStopsOnCancellation(t *testing.T) {
 }
 
 func TestMenuRegistrationRetriesFailure(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 	defer cancel()
 	calls := 0
 	client := menuFixture{set: func(context.Context, []telegram.BotCommand) error {

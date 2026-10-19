@@ -232,6 +232,14 @@ make install-reboot-policy
 ```
 
 This installs [the optional polkit rule](../deploy/50-pi-monitor-reboot.rules).
+The Make target refuses to replace a differing policy; review and merge it
+manually before retrying. With an extracted binary package, install the supplied
+policy manually after reviewing any existing file:
+
+```sh
+sudo install -o root -g root -m 0644 deploy/50-pi-monitor-reboot.rules /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules
+```
+
 It requires systemd/logind, `/usr/bin/systemctl` and polkit with a
 `/etc/polkit-1/rules.d` directory. The rule grants only logind reboot actions,
 including reboot with other users logged in; it does not authorize ignoring
@@ -288,14 +296,19 @@ configuration. Installation builds the binary, uses sudo, creates the service
 account if needed, installs the binary/unit and enables startup at boot. Existing
 deployed configuration and secrets are preserved; edit `/etc/pi-monitor` to update
 them. An adjacent source `secrets.env` is copied only when no deployed secrets file
-exists. Installation does not restart an already running service; after upgrading
-its binary, run `sudo systemctl restart pi-monitor.service` to load the new version.
+exists. A differing deployed unit is refused before installation changes; review
+and merge it manually before retrying. Installation does not restart an already
+running service. After upgrading its binary, run
+`sudo systemctl restart pi-monitor.service` to load the new version.
 `make start-service` starts monitoring immediately. Stop any foreground instance
 first so only one process polls your bot. Terminal exports are not inherited;
 store required credentials in `secrets.env` before starting.
 
 These are manual deployment commands, run on the target host from the repository
-root after building and configuring `config.yaml`. Stop any foreground instance
+root after building and configuring `config.yaml`. For a binary package, work from
+its extracted directory, skip `make build`, use `./pi-monitor` to generate/validate
+config and install `pi-monitor` instead of `bin/pi-monitor` below. Make targets
+are available only in a source checkout. Stop any foreground instance
 before starting the service so only one process polls your Telegram bot.
 
 Create the service account once (skip this command if it already exists):
@@ -306,6 +319,7 @@ sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin pi
 
 Install the binary and configuration. The binary and unit installation commands
 replace previous versions; `cp -n` preserves existing configuration and secrets.
+Inspect and merge an existing unit before replacing it so local hardening is kept.
 If `/etc/pi-monitor/config.yaml` already exists, edit that file for this deployment.
 
 ```sh

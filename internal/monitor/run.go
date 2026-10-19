@@ -7,14 +7,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/host"
-	"pi-monitoring/internal/httpcheck"
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/host"
+	"github.com/NikiTesla/pi-monitoring/internal/httpcheck"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 const maxWorkers = 4
@@ -81,7 +82,7 @@ func Run(ctx context.Context, settings config.Config, diagnostics io.Writer) err
 		client := telegram.New(token)
 		workers.Add(1)
 		go func() { defer workers.Done(); registerCommandMenu(ctx, client, logger) }()
-		for _, chat := range append(append([]int64{}, settings.Telegram.AlertChatIDs...), settings.Telegram.AllowedChatIDs...) {
+		for _, chat := range slices.Concat(settings.Telegram.AlertChatIDs, settings.Telegram.AllowedChatIDs) {
 			if _, exists := r.mailboxes[chat]; exists {
 				continue
 			}

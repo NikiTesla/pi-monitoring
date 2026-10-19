@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 	"gopkg.in/yaml.v3"
-	"pi-monitoring/internal/config"
 )
 
 func assertion(t *testing.T, path, operator, value string) config.JSONAssertion {
@@ -62,7 +62,7 @@ func TestTypedAssertions(t *testing.T) {
 			defer server.Close()
 			c := checkConfig(server.URL)
 			c.Expectations.JSON = []config.JSONAssertion{assertion(t, tt.path, tt.op, tt.value)}
-			result := Run(context.Background(), c)
+			result := Run(t.Context(), c)
 			if result.Success != tt.success || result.Category != tt.category {
 				t.Fatalf("unexpected result: %+v", result)
 			}
@@ -85,17 +85,17 @@ func TestTimeoutAndBodyLimit(t *testing.T) {
 	defer server.Close()
 	c := checkConfig(server.URL + "/slow")
 	c.Timeout = config.Duration(20 * time.Millisecond)
-	if r := Run(context.Background(), c); r.Success || r.Category != "timeout" {
+	if r := Run(t.Context(), c); r.Success || r.Category != "timeout" {
 		t.Fatalf("timeout result: %+v", r)
 	}
 	c = checkConfig(server.URL)
 	c.MaxBodyBytes = 4
 	c.Expectations.Text = []config.TextAssertion{{Operator: "contains", Value: "1"}}
-	if r := Run(context.Background(), c); r.Success || r.Category != "body" {
+	if r := Run(t.Context(), c); r.Success || r.Category != "body" {
 		t.Fatalf("limit result: %+v", r)
 	}
 	c.Expectations.Text = nil
-	if r := Run(context.Background(), c); !r.Success {
+	if r := Run(t.Context(), c); !r.Success {
 		t.Fatalf("status-only unexpectedly read body: %+v", r)
 	}
 }
@@ -116,11 +116,11 @@ func TestRedirectSecrets(t *testing.T) {
 	defer origin.Close()
 	c := checkConfig(origin.URL + "/?token=" + secret)
 	c.Headers = map[string]config.RequestHeader{"X-Custom-Secret": {Value: secret}}
-	if r := Run(context.Background(), c); r.Success || r.StatusCode != 302 {
+	if r := Run(t.Context(), c); r.Success || r.StatusCode != 302 {
 		t.Fatalf("default redirect behavior: %+v", r)
 	}
 	c.FollowRedirects = true
-	if r := Run(context.Background(), c); !r.Success {
+	if r := Run(t.Context(), c); !r.Success {
 		t.Fatalf("follow redirect failed: %+v", r)
 	}
 	mu.Lock()
@@ -130,7 +130,7 @@ func TestRedirectSecrets(t *testing.T) {
 		t.Fatal("custom secret or Referer crossed origin")
 	}
 	c = checkConfig("http://127.0.0.1:1/path?token=" + secret)
-	r := Run(context.Background(), c)
+	r := Run(t.Context(), c)
 	serialized, _ := json.Marshal(r)
 	if strings.Contains(string(serialized), secret) || strings.Contains(string(serialized), "127.0.0.1") {
 		t.Fatal("request details leaked")
@@ -138,15 +138,15 @@ func TestRedirectSecrets(t *testing.T) {
 	c = checkConfig(origin.URL)
 	c.Headers = map[string]config.RequestHeader{"X-Token": {EnvVar: "PI_MONITOR_TEST_UNSET_ENV"}}
 	t.Setenv("PI_MONITOR_TEST_UNSET_ENV", secret)
-	if r := Run(context.Background(), c); r.Category == "configuration" {
+	if r := Run(t.Context(), c); r.Category == "configuration" {
 		t.Fatal("set variable rejected")
 	}
 	t.Setenv("PI_MONITOR_TEST_UNSET_ENV", "")
-	if r := Run(context.Background(), c); r.Category != "configuration" {
+	if r := Run(t.Context(), c); r.Category != "configuration" {
 		t.Fatal("empty credential environment variable accepted")
 	}
 	c.Headers = map[string]config.RequestHeader{"X-Token": {EnvVar: "PI_MONITOR_TEST_NEVER_DEFINED"}}
-	if r := Run(context.Background(), c); r.Category != "configuration" {
+	if r := Run(t.Context(), c); r.Category != "configuration" {
 		t.Fatal("missing environment variable accepted")
 	}
 }
@@ -155,10 +155,13 @@ func TestTLSVerificationAndCancellation(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "ok") }))
 	defer server.Close()
 	c := checkConfig(server.URL)
-	if r := Run(context.Background(), c); r.Success || r.Category != "connection" {
-		t.Fatalf("untrusted TLS certificate accepted: %+v", r)
+	// Allow cold system trust-root loading on busy runners; this tests rejection,
+	// while request deadlines have their own short-timeout fixture.
+	c.Timeout = config.Duration(5 * time.Second)
+	if r := Run(t.Context(), c); r.Success || r.Category != "connection" {
+		t.Fatalf("untrusted TLS request = %+v, want connection failure", r)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	if r := Run(ctx, c); r.Success || r.Category != "canceled" {
 		t.Fatalf("canceled context not honored: %+v", r)
@@ -176,7 +179,7 @@ func TestInvalidHeaderCredentialsDoNotSendRequest(t *testing.T) {
 		t.Setenv("PI_MONITOR_TEST_HEADER", value)
 		check := checkConfig(server.URL)
 		check.Headers = map[string]config.RequestHeader{"Authorization": {EnvVar: "PI_MONITOR_TEST_HEADER"}}
-		result := Run(context.Background(), check)
+		result := Run(t.Context(), check)
 		if result.Success || result.Category != "configuration" {
 			t.Fatalf("invalid credential result: %+v", result)
 		}
@@ -198,13 +201,13 @@ func TestTextAndStatus(t *testing.T) {
 	defer server.Close()
 	c := checkConfig(server.URL)
 	c.Expectations.Text = []config.TextAssertion{{Operator: "eq", Value: "ready"}}
-	r := Run(context.Background(), c)
+	r := Run(t.Context(), c)
 	if r.Success || r.Category != "status" || len(r.Assertions) != 2 || r.Assertions[1].Success {
 		t.Fatalf("unexpected result: %+v", r)
 	}
 	c.Expectations.Status = 503
 	c.Expectations.Text[0] = config.TextAssertion{Operator: "contains", Value: "ready"}
-	if r := Run(context.Background(), c); !r.Success {
+	if r := Run(t.Context(), c); !r.Success {
 		t.Fatalf("contains failed: %+v", r)
 	}
 }

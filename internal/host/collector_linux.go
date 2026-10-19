@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -22,7 +23,7 @@ type Collector struct {
 }
 
 func New(mounts []string) *Collector {
-	return &Collector{mounts: append([]string(nil), mounts...), procRoot: "/proc", thermalRoot: "/sys/class/thermal", statfs: syscall.Statfs}
+	return &Collector{mounts: slices.Clone(mounts), procRoot: "/proc", thermalRoot: "/sys/class/thermal", statfs: syscall.Statfs}
 }
 
 func (c *Collector) Collect() Snapshot {
@@ -58,7 +59,8 @@ func (c *Collector) cpuUsage() *float64 {
 		c.previousCPU = nil
 		return nil
 	}
-	fields := strings.Fields(strings.SplitN(string(content), "\n", 2)[0])
+	firstLine, _, _ := strings.Cut(string(content), "\n")
+	fields := strings.Fields(firstLine)
 	if len(fields) < 5 || fields[0] != "cpu" {
 		c.previousCPU = nil
 		return nil
@@ -104,7 +106,7 @@ func (c *Collector) memory() (uint64, *uint64) {
 	}
 	var total uint64
 	var available *uint64
-	for _, line := range strings.Split(string(content), "\n") {
+	for line := range strings.SplitSeq(string(content), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) != 3 || fields[2] != "kB" || (fields[0] != "MemTotal:" && fields[0] != "MemAvailable:") {
 			continue

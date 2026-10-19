@@ -190,7 +190,7 @@ func TestCLISecretsForRunAndCheck(t *testing.T) {
 	for _, command := range []string{"run", "check"} {
 		t.Run(command, func(t *testing.T) {
 			unsetCredential(t, name)
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 			var requests atomic.Int32
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -251,7 +251,7 @@ func TestCLILoadsTelegramTokenBeforeRuntimeWithoutContactingTelegram(t *testing.
 	}
 	writeSecrets(t, dir, name+"='123:fixture-secret'\n")
 	var out, diagnostics bytes.Buffer
-	code := run(context.Background(), []string{"run", "--config", path}, &out, &diagnostics)
+	code := run(t.Context(), []string{"run", "--config", path}, &out, &diagnostics)
 	if code != 1 || !strings.Contains(diagnostics.String(), "not implemented") {
 		t.Fatalf("expected unsupported runtime rejection, got %d: %s", code, &diagnostics)
 	}
@@ -281,7 +281,7 @@ func TestCLIInvalidSecretsFailBeforeRequestsButValidationStaysOffline(t *testing
 			args = append(args, "api")
 		}
 		var out, diagnostics bytes.Buffer
-		code := run(context.Background(), args, &out, &diagnostics)
+		code := run(t.Context(), args, &out, &diagnostics)
 		want := 2
 		if command == "validate" {
 			want = 0

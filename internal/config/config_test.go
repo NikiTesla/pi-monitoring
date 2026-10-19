@@ -120,6 +120,27 @@ func TestJSONScalarPrecisionAndNull(t *testing.T) {
 	}
 }
 
+func TestFreshnessWindowDurationBounds(t *testing.T) {
+	const maxDuration = time.Duration(1<<63 - 1)
+	for _, test := range []struct {
+		name      string
+		document  string
+		wantError bool
+	}{
+		{"host boundary", fmt.Sprintf("host:\n  interval: %q\n", (maxDuration / 2).String()), false},
+		{"host overflow", fmt.Sprintf("host:\n  interval: %q\n", (maxDuration/2 + 1).String()), true},
+		{"HTTP boundary", strings.Replace(checkYAML, `interval: "30s"`, fmt.Sprintf("interval: %q", (maxDuration-5*time.Second).String()), 1), false},
+		{"HTTP overflow", strings.Replace(checkYAML, `interval: "30s"`, fmt.Sprintf("interval: %q", (maxDuration-5*time.Second+1).String()), 1), true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := Parse([]byte(test.document))
+			if (err != nil) != test.wantError {
+				t.Fatalf("Parse() error = %v, want error %t", err, test.wantError)
+			}
+		})
+	}
+}
+
 func TestIntegerSettingsRejectCoercion(t *testing.T) {
 	settings := []struct {
 		path, document string

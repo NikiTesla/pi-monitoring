@@ -1,4 +1,4 @@
-module pi-monitoring
+module github.com/NikiTesla/pi-monitoring
 
 go 1.24.0
 

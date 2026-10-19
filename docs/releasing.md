@@ -3,29 +3,29 @@
 The current product includes a foreground runtime for HTTP checks, Linux host
 metrics and Telegram alerts/commands. Label releases as an early runtime with
 in-memory state; the full monitoring MVP remains future work. Packages do not
-install or start a service. Do not publish until a project license is
-selected and the remaining readiness gates are met.
+install or start a service. The project is MIT licensed. Complete the
+[readiness gates](release-readiness.md) before publishing release artifacts.
 
 ## Review and verification
 
 1. Independently review source before executing project verification, as required
    by AGENTS.md. Resolve findings first.
 2. Run formatting checks, `go test ./...`, `go vet ./...` and `go test -race ./...`.
-   The GitHub CI workflow checks the minimum compiler and current stable Go, and
+   The GitHub CI workflow checks the minimum compiler, previous and current stable Go, and
    cross-builds Linux ARM64 and AMD64. CI results must actually pass on the hosting
    platform; adding the workflow does not establish a passing race result.
 3. Use a supported, patched Go toolchain for published builds. The minimum Go
    version in go.mod is a source compatibility floor, not a security-support claim.
-   Review dependency vulnerabilities and licenses for that release.
+   Review dependency vulnerabilities and licenses for that release. CI runs
+   `go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...` on stable Go.
 4. Audit all publication files, hidden files and available history including commit
    metadata. Confirm local builds, configs, logs and credentials are excluded. Use
    `git status --short --ignored` and inspect the exact staged file list and contents
    before creating the release commit. Ignore rules alone do not establish privacy.
 
-Before choosing a public tag, set the final repository/module path if needed,
-enable private vulnerability reporting on the hosting platform, and document its
-actual reporting URL. Do not invent a contact address or publish security reports
-as public issues. A security contact is still pending.
+The repository/module path is `github.com/NikiTesla/pi-monitoring`. Before choosing
+a public tag, enable private vulnerability reporting and verify the private form
+linked from [SECURITY.md](../SECURITY.md). Do not publish reports as public issues.
 
 ## Build packages
 
@@ -38,7 +38,8 @@ sh scripts/package-release.sh v0.1.0 ./dist
 The output directory must not exist. Packaging also requires a project LICENSE;
 it fails before building or creating output when that file is missing. Output is
 two Linux archives and SHA256SUMS. Each archive contains a fresh binary, version,
-compiler metadata, README, usage/design/status docs, HTTP example and licenses.
+compiler metadata, README, security/usage/architecture/design/status docs, service
+unit, optional reboot policy, HTTP example and licenses.
 Packaging uploads nothing. Review artifacts before uploading them manually.
 
 Builds disable cgo, workspace files, per-user Go environment configuration and VCS

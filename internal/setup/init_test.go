@@ -2,6 +2,7 @@ package setup
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,7 +55,7 @@ func TestInitPreservesExistingFileAndSymlink(t *testing.T) {
 	if err != nil || string(data) != "keep me" {
 		t.Fatalf("existing file changed: %q, %v", data, err)
 	}
-	if _, err := os.Stat(missing); !os.IsNotExist(err) {
+	if _, err := os.Stat(missing); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("followed dangling symlink: %v", err)
 	}
 }

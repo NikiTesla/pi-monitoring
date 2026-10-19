@@ -2,9 +2,11 @@ package host
 
 import (
 	"math"
+	"slices"
+	"strings"
 	"time"
 
-	"pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
 )
 
 type Transition struct {
@@ -29,7 +31,7 @@ type RuleSet struct {
 }
 
 func NewRules(rules []config.HostRule) *RuleSet {
-	return &RuleSet{rules: append([]config.HostRule(nil), rules...), states: make(map[string]ruleState)}
+	return &RuleSet{rules: slices.Clone(rules), states: make(map[string]ruleState)}
 }
 
 func (r *RuleSet) Evaluate(snapshot Snapshot) []Transition {
@@ -53,7 +55,7 @@ func (r *RuleSet) Evaluate(snapshot Snapshot) []Transition {
 			}
 			// A disappeared mount is unknown, rather than continuous failure/recovery.
 			for id, state := range r.states {
-				if len(id) > len(rule.ID) && id[:len(rule.ID)+1] == rule.ID+":" && !seen[id] {
+				if strings.HasPrefix(id, rule.ID+":") && !seen[id] {
 					state.pendingSince = time.Time{}
 					r.states[id] = state
 				}

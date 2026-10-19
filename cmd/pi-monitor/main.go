@@ -11,10 +11,10 @@ import (
 	"strings"
 	"syscall"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/httpcheck"
-	"pi-monitoring/internal/monitor"
-	"pi-monitoring/internal/setup"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/httpcheck"
+	"github.com/NikiTesla/pi-monitoring/internal/monitor"
+	"github.com/NikiTesla/pi-monitoring/internal/setup"
 )
 
 var version = "dev"

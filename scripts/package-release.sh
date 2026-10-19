@@ -35,11 +35,12 @@ for arch in amd64 arm64; do
     GOARCH=$arch go build -mod=readonly -trimpath -buildvcs=false \
         -ldflags "-buildid= -X main.version=$version" \
         -o "$package/pi-monitor" ./cmd/pi-monitor
-    cp LICENSE README.md CONTRIBUTING.md AGENTS.md THIRD_PARTY_NOTICES.md "$package/"
+    cp LICENSE README.md CONTRIBUTING.md AGENTS.md SECURITY.md THIRD_PARTY_NOTICES.md "$package/"
     cp -R third_party "$package/"
+    cp -R skills "$package/"
     cp examples/http.yaml "$package/examples/"
     cp docs/*.md "$package/docs/"
-    cp deploy/pi-monitor.service "$package/deploy/"
+    cp deploy/pi-monitor.service deploy/50-pi-monitor-reboot.rules "$package/deploy/"
     go version > "$package/BUILD.txt"
     printf 'GOOS=linux\nGOARCH=%s\nCGO_ENABLED=0\n' "$arch" >> "$package/BUILD.txt"
     tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \

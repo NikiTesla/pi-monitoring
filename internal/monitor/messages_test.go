@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/host"
-	"pi-monitoring/internal/httpcheck"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/host"
+	"github.com/NikiTesla/pi-monitoring/internal/httpcheck"
 )
 
 func TestCheckMessagesDistinguishHealthAndFreshness(t *testing.T) {

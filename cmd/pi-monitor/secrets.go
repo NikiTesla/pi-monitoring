@@ -83,8 +83,8 @@ func parseSecrets(data []byte) (map[string]string, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if strings.HasPrefix(line, "export ") {
-			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		if assignment, ok := strings.CutPrefix(line, "export "); ok {
+			line = strings.TrimSpace(assignment)
 		}
 		name, value, found := strings.Cut(line, "=")
 		name, value = strings.TrimSpace(name), strings.TrimSpace(value)

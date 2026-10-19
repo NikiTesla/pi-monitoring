@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -38,6 +39,10 @@ func Validate(settings Config) error {
 	}
 	if settings.Host.Interval <= 0 {
 		return errors.New("host.interval must be positive")
+	}
+	// Freshness allows two intervals; keep that duration representable.
+	if settings.Host.Interval > Duration(math.MaxInt64/2) {
+		return errors.New("host.interval is too large for the freshness window")
 	}
 	for _, mount := range settings.Host.Mounts {
 		if !filepath.IsAbs(mount) {
@@ -71,10 +76,8 @@ func Validate(settings Config) error {
 				return errors.New("telegram allowed_user_ids must be positive")
 			}
 		}
-		for _, id := range append(append([]int64{}, settings.Telegram.AllowedChatIDs...), settings.Telegram.AlertChatIDs...) {
-			if id == 0 {
-				return errors.New("telegram chat IDs must not be zero")
-			}
+		if slices.Contains(settings.Telegram.AllowedChatIDs, 0) || slices.Contains(settings.Telegram.AlertChatIDs, 0) {
+			return errors.New("telegram chat IDs must not be zero")
 		}
 	}
 	seenIDs := map[string]bool{}
@@ -154,6 +157,9 @@ func validateHTTPCheck(check HTTPCheck) error {
 	}
 	if check.Interval <= 0 || check.Timeout <= 0 || check.Timeout >= check.Interval {
 		return errors.New("timeout and interval must be positive; timeout must be shorter than interval")
+	}
+	if check.Interval > Duration(math.MaxInt64)-check.Timeout {
+		return errors.New("interval plus timeout exceeds the supported freshness window")
 	}
 	if check.Method != "GET" && check.Method != "HEAD" {
 		return errors.New("method must be GET or HEAD")

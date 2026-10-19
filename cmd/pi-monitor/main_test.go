@@ -16,11 +16,11 @@ import (
 func TestGeneratedConfigurationCanBeValidated(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
 	var out, diagnostics bytes.Buffer
-	if code := run(context.Background(), []string{"init", "--output", path, "--no-dashboard"}, &out, &diagnostics); code != 0 {
+	if code := run(t.Context(), []string{"init", "--output", path, "--no-dashboard"}, &out, &diagnostics); code != 0 {
 		t.Fatalf("init: code %d: %s", code, &diagnostics)
 	}
 	out.Reset()
-	if code := run(context.Background(), []string{"validate", "--config", path}, &out, &diagnostics); code != 0 {
+	if code := run(t.Context(), []string{"validate", "--config", path}, &out, &diagnostics); code != 0 {
 		t.Fatalf("validate: code %d: %s", code, &diagnostics)
 	}
 	if !strings.Contains(out.String(), "valid") {
@@ -30,7 +30,7 @@ func TestGeneratedConfigurationCanBeValidated(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if code := run(context.Background(), []string{"init", "--output", path}, &out, &diagnostics); code == 0 {
+	if code := run(t.Context(), []string{"init", "--output", path}, &out, &diagnostics); code == 0 {
 		t.Fatal("second init unexpectedly overwrote configuration")
 	}
 	after, err := os.ReadFile(path)
@@ -73,7 +73,7 @@ http_checks:
 	}
 	for _, args := range [][]string{{"check", "api", "--config", path}, {"check", "--config", path, "api"}} {
 		var out, diagnostics bytes.Buffer
-		if code := run(context.Background(), args, &out, &diagnostics); code != 1 {
+		if code := run(t.Context(), args, &out, &diagnostics); code != 1 {
 			t.Fatalf("expected failed check, got %d: %s %s", code, &out, &diagnostics)
 		}
 		if strings.Contains(out.String()+diagnostics.String(), secret) {
@@ -92,7 +92,7 @@ func TestInvalidInitFlagsAreUsageErrors(t *testing.T) {
 		{"init", "--install", "--output", "unused.yaml", "--dry-run"},
 	} {
 		var out, diagnostics bytes.Buffer
-		if code := run(context.Background(), args, &out, &diagnostics); code != 2 {
+		if code := run(t.Context(), args, &out, &diagnostics); code != 2 {
 			t.Fatalf("%v: expected usage error, got %d: %s", args, code, &diagnostics)
 		}
 		if out.Len() != 0 {
@@ -127,7 +127,7 @@ func TestMissingHeaderCredentialsAreConfigurationErrors(t *testing.T) {
 				}
 			}
 			var out, diagnostics bytes.Buffer
-			if code := run(context.Background(), []string{"check", "api", "--config", path}, &out, &diagnostics); code != 2 {
+			if code := run(t.Context(), []string{"check", "api", "--config", path}, &out, &diagnostics); code != 2 {
 				t.Fatalf("expected configuration exit 2, got %d: %s %s", code, &out, &diagnostics)
 			}
 			var result struct {
@@ -151,7 +151,7 @@ func TestRunRejectsUnsupportedFeaturesBeforeNetwork(t *testing.T) {
 			t.Fatal(err)
 		}
 		var out, diagnostics bytes.Buffer
-		if code := run(context.Background(), []string{"run", "--config", path}, &out, &diagnostics); code != 1 {
+		if code := run(t.Context(), []string{"run", "--config", path}, &out, &diagnostics); code != 1 {
 			t.Fatalf("expected runtime rejection, got %d: %s", code, &diagnostics)
 		}
 		if !strings.Contains(diagnostics.String(), "not implemented") {
@@ -165,7 +165,7 @@ func TestRunStopsOnCancellation(t *testing.T) {
 	if err := os.WriteFile(path, []byte("host:\n  enabled: false\ndashboard:\n  enabled: false\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 	var out, diagnostics bytes.Buffer
 	if code := run(ctx, []string{"run", "--config", path}, &out, &diagnostics); code != 0 {

@@ -17,3 +17,4 @@
 *.db-wal
 /coverage.out
 /dist/
+/.cache/

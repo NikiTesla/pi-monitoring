@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"pi-monitoring/internal/config"
-	"pi-monitoring/internal/httpcheck"
-	"pi-monitoring/internal/telegram"
+	"github.com/NikiTesla/pi-monitoring/internal/config"
+	"github.com/NikiTesla/pi-monitoring/internal/httpcheck"
+	"github.com/NikiTesla/pi-monitoring/internal/telegram"
 )
 
 func TestHTTPIncidentStreaksAndUnknown(t *testing.T) {
@@ -125,7 +125,7 @@ func TestDeliveryCoalescesLatestStateAndStops(t *testing.T) {
 	mail := newMailbox(11)
 	mail.put("api", "failed")
 	mail.put("api", "recovered")
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	client := recordingSender{sent: make(chan string, 2)}
 	done := make(chan struct{})
@@ -149,7 +149,7 @@ func TestDeliveryCoalescesLatestStateAndStops(t *testing.T) {
 func TestRunRejectsUnsupportedComponentsBeforeNetwork(t *testing.T) {
 	settings := config.Defaults()
 	settings.Docker.Enabled = true
-	if err := Run(context.Background(), settings, io.Discard); err == nil || !strings.Contains(err.Error(), "not implemented") {
+	if err := Run(t.Context(), settings, io.Discard); err == nil || !strings.Contains(err.Error(), "not implemented") {
 		t.Fatalf("got %v", err)
 	}
 }
@@ -173,7 +173,7 @@ func TestRunSchedulesRepeatedChecksAndJoinsOnCancellation(t *testing.T) {
 	settings.Host.Enabled = false
 	settings.Dashboard.Enabled = false
 	settings.HTTPChecks = []config.HTTPCheck{{ID: "api", URL: server.URL, Method: "GET", Interval: config.Duration(150 * time.Millisecond), Timeout: config.Duration(100 * time.Millisecond), MaxBodyBytes: 1024, Expectations: config.Expectations{Status: 200}, AlertPolicy: config.AlertPolicy{Failures: 1, RecoverySuccesses: 1}}}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	done := make(chan error, 1)
 	go func() { done <- Run(ctx, settings, io.Discard) }()
@@ -205,7 +205,7 @@ func TestPollingRetriesAndSkipsDuplicateUpdates(t *testing.T) {
 		t.Fatalf("retry delay = %s", got)
 	}
 	r := runtime{settings: config.Config{Telegram: config.Telegram{AllowedChatIDs: []int64{11}, AllowedUserIDs: []int64{22}}}}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	client := &fakePoller{cancel: cancel}
 	commands := make(chan command, 4)
