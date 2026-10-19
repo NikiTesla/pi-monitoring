@@ -4,7 +4,7 @@ GO ?= go
 CONFIG ?= ./config.yaml
 CHECK_ID ?=
 
-.PHONY: help build init validate start run check version test vet race fmt install-service start-service install-reboot-policy
+.PHONY: help build init validate start run check version test vet race fmt install-service start-service restart-service install-reboot-policy
 
 help:
 	@printf '%s\n' \
@@ -16,6 +16,7 @@ help:
 	  'make version                Print the binary version' \
 	  'make install-service        Install systemd service and enable startup at boot (uses sudo)' \
 	  'make start-service          Start the installed service now (uses sudo)' \
+	  'make restart-service        Rebuild, install binary and restart the existing service (uses sudo)' \
 	  'make install-reboot-policy  Allow pi-monitor to request host reboots (optional; uses sudo)' \
 	  'make test                   Run tests with local fixtures' \
 	  'make vet                    Run go vet' \
@@ -78,6 +79,14 @@ install-service: build
 
 start-service:
 	sudo systemctl start pi-monitor.service
+
+# Update the binary while preserving the installed unit and configuration.
+restart-service: build
+	@test -d /run/systemd/system || { printf '%s\n' 'A Linux host running systemd is required.' >&2; exit 1; }
+	sudo systemctl cat pi-monitor.service >/dev/null
+	sudo install -o root -g root -m 0755 bin/pi-monitor /usr/local/bin/pi-monitor
+	sudo -u pi-monitor /usr/local/bin/pi-monitor validate --config /etc/pi-monitor/config.yaml
+	sudo systemctl restart pi-monitor.service
 
 # Explicit opt-in; the ordinary service installation grants no reboot policy.
 install-reboot-policy:

@@ -10,7 +10,9 @@ component exists.
   `run` and `check`, with process environment variables taking precedence.
 - Configuration generation, offline validation and systemd installation planning.
 - Makefile systemd setup: `install-service` installs/enables the supplied unit;
-  `start-service` starts it separately. Live deployment remains unverified.
+  `start-service` starts it separately; `restart-service` rebuilds and installs the
+  binary, validates deployed config and restarts the existing service while
+  preserving its unit and configuration. Live deployment remains unverified.
 - One-shot HTTP checks with status, text and typed JSON Pointer assertions.
 - Foreground `run` with bounded HTTP scheduling and incident/recovery tracking.
 - Linux host observations: CPU utilization, memory, load, configured filesystem

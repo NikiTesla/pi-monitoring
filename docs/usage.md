@@ -298,8 +298,21 @@ deployed configuration and secrets are preserved; edit `/etc/pi-monitor` to upda
 them. An adjacent source `secrets.env` is copied only when no deployed secrets file
 exists. A differing deployed unit is refused before installation changes; review
 and merge it manually before retrying. Installation does not restart an already
-running service. After upgrading its binary, run
-`sudo systemctl restart pi-monitor.service` to load the new version.
+running service.
+
+To rebuild and restart an existing installation in one command:
+
+```sh
+make restart-service
+```
+
+This builds and installs `/usr/local/bin/pi-monitor`, validates the deployed
+`/etc/pi-monitor/config.yaml` as the service account, then restarts the service
+(or starts it if stopped). It preserves the installed unit, configuration,
+secrets and boot enablement, so a differing unit does not block a binary update.
+The installed unit must use the standard binary and configuration paths above.
+If validation fails, the binary has been updated but the service is not restarted.
+
 `make start-service` starts monitoring immediately. Stop any foreground instance
 first so only one process polls your bot. Terminal exports are not inherited;
 store required credentials in `secrets.env` before starting.

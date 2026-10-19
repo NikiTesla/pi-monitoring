@@ -78,7 +78,9 @@ health. Alerts distinguish opening, ongoing and recovered incidents.
 
 For background operation, follow [systemd setup](docs/usage.md#run-in-the-background-with-systemd).
 `make install-service` uses sudo and enables startup at boot; `make start-service`
-starts monitoring separately. Review the optional
+starts monitoring separately. For later updates, `make restart-service` rebuilds,
+installs the binary and restarts the existing service, preserving its unit and
+configuration. Review the optional
 [reboot permission](docs/usage.md#enable-server-reboot-from-telegram) before enabling it.
 
 ## Architecture
