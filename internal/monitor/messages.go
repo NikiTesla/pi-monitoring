@@ -22,7 +22,7 @@ func (s *checkState) summary(now time.Time) string {
 	if !s.result.Success {
 		status = "🔴 " + s.check.ID + " · Failed"
 	}
-	if s.unknown || now.Sub(s.result.StartedAt) > s.check.Interval.Value()+s.check.Timeout.Value() {
+	if s.unknown || s.nextResultOverdue(now) {
 		status = "🟠 " + s.check.ID + " · Stale / unknown"
 		if s.result.Success {
 			status += "\nLast result: healthy"

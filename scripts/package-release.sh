@@ -25,19 +25,20 @@ output=$(cd "$output" && pwd)
 staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT HUP INT TERM
 export LC_ALL=C TZ=UTC
-export GOENV=off GOWORK=off GOFLAGS= CGO_ENABLED=0 GOOS=linux
+export GOENV=off GOWORK=off GOFLAGS='' CGO_ENABLED=0 GOOS=linux
 export GOAMD64=v1 GOARM64=v8.0
 
 for arch in amd64 arm64; do
     name="pi-monitor_${version}_linux_${arch}"
     package="$staging/$name"
-    mkdir -p "$package/examples" "$package/docs" "$package/deploy"
+    mkdir -p "$package/examples" "$package/docs" "$package/deploy" "$package/scripts"
     GOARCH=$arch go build -mod=readonly -trimpath -buildvcs=false \
         -ldflags "-buildid= -X main.version=$version" \
         -o "$package/pi-monitor" ./cmd/pi-monitor
     cp LICENSE README.md CONTRIBUTING.md AGENTS.md SECURITY.md THIRD_PARTY_NOTICES.md "$package/"
     cp -R third_party "$package/"
     cp -R skills "$package/"
+    cp scripts/check-service-account.sh "$package/scripts/"
     cp examples/http.yaml "$package/examples/"
     cp docs/*.md "$package/docs/"
     cp deploy/pi-monitor.service deploy/50-pi-monitor-reboot.rules "$package/deploy/"

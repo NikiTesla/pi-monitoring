@@ -36,6 +36,9 @@ jobs:
       - run: go test -timeout 60s ./...
       - run: go vet ./...
       - run: go test -race -timeout 60s ./...
+      - name: Deployment fixtures
+        if: matrix.go == 'stable'
+        run: sh scripts/test-deployment.sh
       - name: Linux builds
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=readonly -trimpath -o /tmp/pi-monitor-amd64 ./cmd/pi-monitor

@@ -96,3 +96,27 @@ func TestCounterResetMissingAndMalformedMetrics(t *testing.T) {
 		t.Fatal("malformed CPU sample must break rate continuity")
 	}
 }
+
+func TestDiskObservationRequiresMountedFilesystem(t *testing.T) {
+	var stats syscall.Statfs_t
+	if err := statMountedFilesystem("/proc", &stats); err != nil {
+		t.Fatalf("procfs mount: %v", err)
+	}
+
+	unmounted := t.TempDir()
+	rootAlias := filepath.Join(unmounted, "root")
+	if err := os.Symlink("/", rootAlias); err != nil {
+		t.Fatal(err)
+	}
+	c := fixtureCollector(t)
+	c.mounts = []string{rootAlias, unmounted}
+	c.statfs = statMountedFilesystem
+
+	disks := c.Collect().Disks
+	if disks[0].FreeBytes == nil || disks[0].FreePercent == nil {
+		t.Fatal("the root filesystem must be available through its alias")
+	}
+	if disks[1].TotalBytes != 0 || disks[1].FreeBytes != nil || disks[1].FreePercent != nil {
+		t.Fatalf("unmounted directory inherited its parent filesystem: %+v", disks[1])
+	}
+}

@@ -58,7 +58,11 @@ After review, run:
 go test ./...
 go vet ./...
 go test -race ./...
+sh scripts/test-deployment.sh
 ```
+
+The deployment fixture checks the Make recipes on Linux with temporary paths and
+stand-ins for privileged commands. CI runs it on the stable Go job.
 
 Use temporary directories and disposable loopback HTTP/TLS fixtures. Do not use a
 live endpoint, install or start a system service, modify Docker permissions, or

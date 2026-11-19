@@ -17,6 +17,20 @@ type poller interface {
 	Updates(context.Context, int64) ([]telegram.Update, error)
 }
 
+// Telegram retains updates for at most 24 hours and may choose a lower ID
+// after a week of inactivity. An older offset can acknowledge unseen commands.
+type updateCursor struct {
+	offset  int64
+	expires time.Time
+}
+
+func (c *updateCursor) nextOffset(now time.Time) int64 {
+	if !now.Before(c.expires) {
+		c.offset = 0
+	}
+	return c.offset
+}
+
 func (r *runtime) poll(ctx context.Context, client poller, commands chan<- command, logger *log.Logger) {
 	backoff := time.Second
 	for ctx.Err() == nil {
@@ -35,11 +49,11 @@ func (r *runtime) poll(ctx context.Context, client poller, commands chan<- comma
 		}
 		backoff = min(30*time.Second, backoff*2)
 	}
-	var offset int64
+	var cursor updateCursor
 	failed := false
 	backoff = time.Second
 	for ctx.Err() == nil {
-		updates, err := client.Updates(ctx, offset)
+		updates, err := client.Updates(ctx, cursor.nextOffset(time.Now()))
 		if err != nil {
 			if ctx.Err() != nil {
 				return
@@ -60,10 +74,11 @@ func (r *runtime) poll(ctx context.Context, client poller, commands chan<- comma
 		failed = false
 		backoff = time.Second
 		for _, update := range updates {
-			if update.ID < offset {
+			if update.ID < cursor.offset {
 				continue
 			}
-			offset = update.ID + 1
+			cursor.offset = update.ID + 1
+			cursor.expires = time.Now().Add(24 * time.Hour)
 			cmd, ok := r.authorizedCommand(update.Message)
 			if !ok {
 				continue

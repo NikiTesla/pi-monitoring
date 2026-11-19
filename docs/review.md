@@ -1,5 +1,33 @@
 # Review and verification
 
+## Installer identity and HTTP header validation — 2026-11-19
+
+The literal-header regression reproduced on `99cd958` and passed with shared
+validation. All seven packages passed on Go 1.24.4. Go 1.27.2 vet and
+`go fix -diff` passed. ShellCheck passed on the three deployment and release scripts.
+
+The versioned deployment fixture exercised account adoption and rejection,
+recognition of an existing installation, and preservation of the installed binary
+after failed validation. It ran locally with stand-ins for privileged commands.
+CI now includes the fixture. Repeat Go 1.27.2 builds for Linux AMD64 and ARM64
+produced matching checksums and included the account verifier in both archives.
+Hosted CI and live deployment remain unverified.
+
+## Monitoring and deployment fixes — 2026-11-19
+
+After independent source review, all seven packages passed the fixture suite on
+Go 1.24.4. The suite covers scheduler tick delays, Telegram offset expiry,
+missing mount points and CLI credential exit codes. Linux ARM64 and AMD64 builds
+passed on Go 1.24.4. Go 1.27.2 vet, formatting and diff checks passed.
+
+An isolated deployment fixture exercised the shared Make recipe with fake sudo.
+Failed validation preserved the installed binary, successful validation replaced
+it, and both paths cleaned up the staged file. Live service operation remains
+unverified.
+
+The Go 1.27.2 race runtime exited before tests on this ARM64 host (47-bit VMA,
+48 required). A passing race run on a supported host remains outstanding.
+
 ## Go modernization — 2026-10-19
 
 Independent source review checked Go 1.24 API availability, slice ownership,

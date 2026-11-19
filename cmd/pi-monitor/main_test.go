@@ -130,6 +130,9 @@ func TestMissingHeaderCredentialsAreConfigurationErrors(t *testing.T) {
 			if code := run(t.Context(), []string{"check", "api", "--config", path}, &out, &diagnostics); code != 2 {
 				t.Fatalf("expected configuration exit 2, got %d: %s %s", code, &out, &diagnostics)
 			}
+			if code := run(t.Context(), []string{"run", "--config", path}, &out, &diagnostics); code != 2 {
+				t.Fatalf("run with missing header: code %d: %s", code, &diagnostics)
+			}
 			var result struct {
 				Category string `json:"category"`
 				Success  bool   `json:"success"`
@@ -138,6 +141,26 @@ func TestMissingHeaderCredentialsAreConfigurationErrors(t *testing.T) {
 				t.Fatalf("expected structured configuration failure, got %s: %v", &out, err)
 			}
 		})
+	}
+}
+
+func TestRunRejectsMalformedTelegramToken(t *testing.T) {
+	const token = "invalid-fixture-token"
+	t.Setenv("TEST_BOT_TOKEN", token)
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	settings := `telegram:
+  enabled: true
+  token_env: TEST_BOT_TOKEN
+  allowed_chat_ids: [12]
+  allowed_user_ids: [34]
+  alert_chat_ids: [12]
+`
+	if err := os.WriteFile(path, []byte(settings), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var out, diagnostics bytes.Buffer
+	if code := run(t.Context(), []string{"run", "--config", path}, &out, &diagnostics); code != 2 || !strings.Contains(diagnostics.String(), "Telegram token") || strings.Contains(diagnostics.String(), token) {
+		t.Fatalf("expected redacted credential error and exit 2, got %d: %s", code, &diagnostics)
 	}
 }
 

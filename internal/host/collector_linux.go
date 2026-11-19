@@ -3,6 +3,7 @@
 package host
 
 import (
+	"errors"
 	"math"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ type Collector struct {
 }
 
 func New(mounts []string) *Collector {
-	return &Collector{mounts: slices.Clone(mounts), procRoot: "/proc", thermalRoot: "/sys/class/thermal", statfs: syscall.Statfs}
+	return &Collector{mounts: slices.Clone(mounts), procRoot: "/proc", thermalRoot: "/sys/class/thermal", statfs: statMountedFilesystem}
 }
 
 func (c *Collector) Collect() Snapshot {
@@ -51,6 +52,56 @@ func (c *Collector) Collect() Snapshot {
 	}
 	snapshot.TemperatureCelsius = c.temperature()
 	return snapshot
+}
+
+// Keep the descriptor open through Fstatfs so an unmount cannot substitute
+// the parent filesystem between the mount check and the space measurement.
+func statMountedFilesystem(path string, stats *syscall.Statfs_t) error {
+	const openPath = 0x200000 // Linux O_PATH is absent from syscall on amd64.
+	mount, err := os.OpenFile(path, openPath, 0)
+	if err != nil {
+		return err
+	}
+	defer mount.Close()
+
+	fd := strconv.FormatUint(uint64(mount.Fd()), 10)
+	resolved, err := os.Readlink("/proc/self/fd/" + fd)
+	if err != nil {
+		return err
+	}
+	if resolved != "/" {
+		parent, err := os.OpenFile(filepath.Dir(resolved), openPath, 0)
+		if err != nil {
+			return err
+		}
+		defer parent.Close()
+
+		mountID, err := descriptorMountID(mount)
+		if err != nil {
+			return err
+		}
+		parentID, err := descriptorMountID(parent)
+		if err != nil {
+			return err
+		}
+		if mountID == parentID {
+			return errors.New("path is not a mount point")
+		}
+	}
+	return syscall.Fstatfs(int(mount.Fd()), stats)
+}
+
+func descriptorMountID(file *os.File) (string, error) {
+	content, err := os.ReadFile("/proc/self/fdinfo/" + strconv.FormatUint(uint64(file.Fd()), 10))
+	if err != nil {
+		return "", err
+	}
+	for line := range strings.SplitSeq(string(content), "\n") {
+		if id, ok := strings.CutPrefix(line, "mnt_id:\t"); ok && id != "" {
+			return id, nil
+		}
+	}
+	return "", errors.New("mount ID unavailable")
 }
 
 func (c *Collector) cpuUsage() *float64 {

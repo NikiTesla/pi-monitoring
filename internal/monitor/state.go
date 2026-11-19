@@ -8,6 +8,8 @@ import (
 	"github.com/NikiTesla/pi-monitoring/internal/httpcheck"
 )
 
+const scheduleTick = 100 * time.Millisecond
+
 type checkState struct {
 	check               config.HTTPCheck
 	next                time.Time
@@ -27,9 +29,15 @@ func (s *checkState) missed() {
 	s.firstFailure = time.Time{}
 }
 
+// A due check can wait one scheduler tick before a worker receives it.
+func (s *checkState) nextResultOverdue(now time.Time) bool {
+	deadline := s.result.StartedAt.Add(s.check.Interval.Value() + s.check.Timeout.Value()).Add(scheduleTick)
+	return now.After(deadline)
+}
+
 // Only completed evaluations advance streaks. Unknown observations cannot recover.
 func (s *checkState) observe(result httpcheck.Result, now, graceEnd time.Time) string {
-	if s.result != nil && result.StartedAt.Sub(s.result.StartedAt) > s.check.Interval.Value()+s.check.Timeout.Value() {
+	if s.result != nil && s.nextResultOverdue(result.StartedAt) {
 		s.missed()
 	}
 	s.result = &result

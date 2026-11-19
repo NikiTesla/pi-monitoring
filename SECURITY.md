@@ -5,7 +5,7 @@
 Use GitHub's private
 [Report a vulnerability](https://github.com/NikiTesla/pi-monitoring/security/advisories/new)
 form when available. Private vulnerability reporting must be enabled by the
-maintainer before public launch. If unavailable, ask the maintainer to enable a
+maintainer as soon as the repository becomes public. If unavailable, ask the maintainer to enable a
 private route without including exploit details in a public issue. There is no
 separate security email or response-time commitment yet.
 

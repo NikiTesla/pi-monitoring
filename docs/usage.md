@@ -134,9 +134,10 @@ its process identity must be able to read the config and the adjacent secrets fi
 
 Generated YAML enables host metrics and basic low-memory, low-disk, high-CPU and
 high-temperature rules. Review thresholds for your Pi before running. Set
-`host.mounts` to filesystems you want observed. Disk rules evaluate each configured
-mount independently. Use local filesystems: a probe of an unresponsive network
-filesystem can block collection and shutdown. Unsupported or unreadable observations are unavailable, not
+`host.mounts` to paths that resolve to actual mount points. If a volume is
+unmounted and its directory remains, its disk reading becomes unavailable.
+Disk rules evaluate each configured mount independently. Use local filesystems,
+since probing an unresponsive network filesystem can block collection and shutdown. Unsupported or unreadable observations are unavailable, not
 zero. CPU utilization needs two samples and is unavailable on the first sample.
 Temperature depends on exposed Linux thermal sensors. Missing observations cannot
 recover an open incident.
@@ -234,10 +235,11 @@ make install-reboot-policy
 This installs [the optional polkit rule](../deploy/50-pi-monitor-reboot.rules).
 The Make target refuses to replace a differing policy; review and merge it
 manually before retrying. With an extracted binary package, install the supplied
-policy manually after reviewing any existing file:
+policy manually after reviewing any existing file and checking the service identity:
 
 ```sh
-sudo install -o root -g root -m 0644 deploy/50-pi-monitor-reboot.rules /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules
+sh scripts/check-service-account.sh && \
+  sudo install -o root -g root -m 0644 deploy/50-pi-monitor-reboot.rules /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules
 ```
 
 It requires systemd/logind, `/usr/bin/systemctl` and polkit with a
@@ -306,12 +308,13 @@ To rebuild and restart an existing installation in one command:
 make restart-service
 ```
 
-This builds and installs `/usr/local/bin/pi-monitor`, validates the deployed
-`/etc/pi-monitor/config.yaml` as the service account, then restarts the service
+This builds a candidate binary and uses it to validate
+`/etc/pi-monitor/config.yaml` as the service account. On success it replaces
+`/usr/local/bin/pi-monitor` and restarts the service
 (or starts it if stopped). It preserves the installed unit, configuration,
 secrets and boot enablement, so a differing unit does not block a binary update.
 The installed unit must use the standard binary and configuration paths above.
-If validation fails, the binary has been updated but the service is not restarted.
+If validation fails, the existing binary continues to be used on the next start.
 
 `make start-service` starts monitoring immediately. Stop any foreground instance
 first so only one process polls your bot. Terminal exports are not inherited;
@@ -324,11 +327,21 @@ config and install `pi-monitor` instead of `bin/pi-monitor` below. Make targets
 are available only in a source checkout. Stop any foreground instance
 before starting the service so only one process polls your Telegram bot.
 
-Create the service account once (skip this command if it already exists):
+Create a dedicated service account on a fresh installation:
 
 ```sh
-sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin pi-monitor
+sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin pi-monitor && \
+  sh scripts/check-service-account.sh --adopt
 ```
+
+For an existing account, run `sh scripts/check-service-account.sh` and continue
+only if it succeeds. Both installation targets check for a password-locked,
+nonlogin account with its own primary group. An existing installation is recognized
+by its matching root-owned unit. If this evidence is missing, verify the account
+and group are exclusively used by pi-monitor, including directory-service users
+that cannot be enumerated locally. Then explicitly adopt the account with
+`--adopt` for the manual check or `ADOPT_SERVICE_ACCOUNT=1` for the Make target.
+Adoption still requires the identity checks to pass.
 
 Install the binary and configuration. The binary and unit installation commands
 replace previous versions; `cp -n` preserves existing configuration and secrets.
@@ -421,7 +434,9 @@ honored. Redirects default off; prefer the final HTTPS health URL.
 
 To remove a manual systemd deployment, disable it with the command above, remove
 `/etc/systemd/system/pi-monitor.service` and run `sudo systemctl daemon-reload`.
-Then remove `/usr/local/bin/pi-monitor` if no longer needed. For a foreground-only
-deployment, stop the foreground process and remove its binary.
+If you installed the optional reboot policy, remove
+`/etc/polkit-1/rules.d/50-pi-monitor-reboot.rules` to revoke the service
+account's reboot permission. Then remove `/usr/local/bin/pi-monitor` if no longer
+needed. For a foreground-only deployment, stop the process and remove its binary.
 Delete private configuration and credentials only if no longer needed. There is
 no service or database created by the application to uninstall.

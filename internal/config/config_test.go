@@ -40,6 +40,20 @@ func TestParseDefaultsAndOfflineSecrets(t *testing.T) {
 	}
 }
 
+func TestLiteralHTTPHeaderValues(t *testing.T) {
+	const headers = "    headers:\n      X-Example: "
+	for _, value := range []string{"part\x00two", "part\x01two", "part\x7ftwo"} {
+		if _, err := Parse([]byte(checkYAML + headers + fmt.Sprintf("%q", value))); err == nil {
+			t.Errorf("accepted HTTP header with control byte: %q", value)
+		}
+	}
+	for _, value := range []string{"", "part\ttwo", "café"} {
+		if _, err := Parse([]byte(checkYAML + headers + fmt.Sprintf("%q", value))); err != nil {
+			t.Errorf("rejected valid HTTP header %q: %v", value, err)
+		}
+	}
+}
+
 func TestRebootPermissionRequiresExplicitBoolean(t *testing.T) {
 	settings, err := Parse([]byte("schema_version: 1\n"))
 	if err != nil || settings.Telegram.AllowReboot {

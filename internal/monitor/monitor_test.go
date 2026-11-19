@@ -237,3 +237,30 @@ func (p *fakePoller) Updates(_ context.Context, offset int64) ([]telegram.Update
 	message := &telegram.Message{From: &telegram.User{ID: 22}, Chat: telegram.Chat{ID: 11}, Text: "/status"}
 	return []telegram.Update{{ID: 1, Message: message}, {ID: 1, Message: message}}, nil
 }
+
+func TestHTTPIncidentAcrossSchedulerTicks(t *testing.T) {
+	now := time.Now()
+	state := checkState{check: config.HTTPCheck{
+		Interval: config.Duration(150 * time.Millisecond), Timeout: config.Duration(20 * time.Millisecond),
+		AlertPolicy: config.AlertPolicy{Failures: 2, RecoverySuccesses: 2},
+	}}
+	state.observe(httpcheck.Result{StartedAt: now}, now, now)
+	next := now.Add(200 * time.Millisecond)
+	if strings.Contains(state.summary(next), "Stale") {
+		t.Fatal("previous result became stale before the next scheduled check")
+	}
+	if state.observe(httpcheck.Result{StartedAt: next}, next, now) == "" || !state.incident {
+		t.Fatal("two consecutive scheduled failures did not open an incident")
+	}
+}
+
+func TestExpiredTelegramOffsetAcceptsLowerIDs(t *testing.T) {
+	expires := time.Now().Add(24 * time.Hour)
+	cursor := updateCursor{offset: 50, expires: expires}
+	if cursor.nextOffset(expires.Add(-time.Minute)) != 50 {
+		t.Fatal("offset forgotten while updates can still be queued")
+	}
+	if cursor.nextOffset(expires.Add(7*24*time.Hour)) != 0 || cursor.offset != 0 {
+		t.Fatal("obsolete offset would skip a new lower update ID")
+	}
+}

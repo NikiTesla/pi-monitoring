@@ -39,7 +39,7 @@ The output directory must not exist. Packaging also requires a project LICENSE;
 it fails before building or creating output when that file is missing. Output is
 two Linux archives and SHA256SUMS. Each archive contains a fresh binary, version,
 compiler metadata, README, security/usage/architecture/design/status docs, service
-unit, optional reboot policy, HTTP example and licenses.
+unit, service-account checker, optional reboot policy, HTTP example and licenses.
 Packaging uploads nothing. Review artifacts before uploading them manually.
 
 Builds disable cgo, workspace files, per-user Go environment configuration and VCS

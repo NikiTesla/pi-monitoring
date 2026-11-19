@@ -20,6 +20,8 @@ import (
 
 const maxWorkers = 4
 
+var ErrInvalidCredentials = errors.New("invalid credentials")
+
 type command struct {
 	chat           int64
 	user           int64
@@ -49,15 +51,15 @@ func Run(ctx context.Context, settings config.Config, diagnostics io.Writer) err
 	}
 	for _, check := range settings.HTTPChecks {
 		for _, header := range check.Headers {
-			if header.EnvVar != "" && os.Getenv(header.EnvVar) == "" {
-				return fmt.Errorf("HTTP check %s: required header environment variable is missing", check.ID)
+			if header.EnvVar == "" {
+				continue
 			}
-			if header.EnvVar != "" {
-				for _, b := range []byte(os.Getenv(header.EnvVar)) {
-					if (b < 0x20 && b != '\t') || b == 0x7f {
-						return fmt.Errorf("HTTP check %s: header environment value is invalid", check.ID)
-					}
-				}
+			value := os.Getenv(header.EnvVar)
+			if value == "" {
+				return fmt.Errorf("%w: HTTP check %s: required header environment variable is missing", ErrInvalidCredentials, check.ID)
+			}
+			if !config.ValidHTTPHeaderValue(value) {
+				return fmt.Errorf("%w: HTTP check %s: header environment value is invalid", ErrInvalidCredentials, check.ID)
 			}
 		}
 	}
@@ -77,7 +79,7 @@ func Run(ctx context.Context, settings config.Config, diagnostics io.Writer) err
 	if settings.Telegram.Enabled {
 		token := os.Getenv(settings.Telegram.TokenEnvVar)
 		if !validToken(token) {
-			return errors.New("Telegram token is missing or malformed; set the variable named by telegram.token_env in the environment or in secrets.env beside the configuration")
+			return fmt.Errorf("%w: Telegram token is missing or malformed; set the variable named by telegram.token_env in the environment or in secrets.env beside the configuration", ErrInvalidCredentials)
 		}
 		client := telegram.New(token)
 		workers.Add(1)
@@ -151,7 +153,7 @@ func Run(ctx context.Context, settings config.Config, diagnostics io.Writer) err
 		}()
 	}
 	rules := host.NewRules(settings.HostRules)
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(scheduleTick)
 	defer ticker.Stop()
 	nextRepeat := now.Add(settings.Alerts.CriticalRepeatInterval.Value())
 	scheduleStart := 0

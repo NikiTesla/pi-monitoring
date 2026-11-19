@@ -192,7 +192,7 @@ func validateHTTPCheck(check HTTPCheck) error {
 		if strings.EqualFold(name, "Host") || strings.EqualFold(name, "Content-Length") || strings.EqualFold(name, "Transfer-Encoding") {
 			return errors.New("Host, Content-Length and Transfer-Encoding headers are unsupported")
 		}
-		if strings.ContainsAny(header.Value, "\r\n") || (header.EnvVar != "" && !environmentVariableName.MatchString(header.EnvVar)) {
+		if !ValidHTTPHeaderValue(header.Value) || (header.EnvVar != "" && !environmentVariableName.MatchString(header.EnvVar)) {
 			return errors.New("invalid request header value or environment reference")
 		}
 	}
@@ -207,6 +207,16 @@ func validateHTTPCheck(check HTTPCheck) error {
 		}
 	}
 	return nil
+}
+
+// ValidHTTPHeaderValue permits a horizontal tab but forbids other ASCII control bytes.
+func ValidHTTPHeaderValue(value string) bool {
+	for i := 0; i < len(value); i++ {
+		if (value[i] < 0x20 && value[i] != '\t') || value[i] == 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 func validHeaderName(name string) bool {

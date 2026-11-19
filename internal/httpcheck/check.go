@@ -73,12 +73,8 @@ func Run(ctx context.Context, check config.HTTPCheck) (result Result) {
 				return fail("configuration", "required header environment variable is missing")
 			}
 		}
-		// Environment values bypass YAML validation. Reject invalid field bytes
-		// before transport so credential errors remain configuration failures.
-		for i := 0; i < len(value); i++ {
-			if (value[i] < 0x20 && value[i] != '\t') || value[i] == 0x7f {
-				return fail("configuration", "request header contains an invalid value")
-			}
+		if !config.ValidHTTPHeaderValue(value) {
+			return fail("configuration", "request header contains an invalid value")
 		}
 		request.Header.Set(name, value)
 	}

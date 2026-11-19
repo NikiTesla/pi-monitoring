@@ -1,6 +1,6 @@
 # Publication and release readiness
 
-Last audited: 2026-10-19. Repository: `github.com/NikiTesla/pi-monitoring`.
+Release verification: 2026-10-19. Privacy review: 2026-11-19. Repository: `github.com/NikiTesla/pi-monitoring`.
 
 The project can be presented as an **early monitoring runtime**, with explicit
 in-memory reliability limits. A public portfolio repository and a production-ready
@@ -31,14 +31,17 @@ heartbeats and persistent state are future work.
 
 1. Review the final diff and staged contents, including newly added/hidden files.
    Keep ignored local configs, binaries and caches out of the publication commit.
-2. Review commit author metadata: the existing local commit includes an author
-   email. Decide whether it is suitable for public exposure before changing
+2. Review commit author metadata: all three reviewed commits include the same author
+   and committer email. Decide whether it is suitable for public exposure before changing
    visibility. History was inspected but has not been rewritten.
 3. Push the reviewed changes to the private repository and obtain passing hosted
    CI on that revision. Local verification does not establish hosted results.
-4. Enable private vulnerability reporting and verify the form in SECURITY.md.
-   Set branch protection/rulesets to require review and the applicable CI jobs;
+4. Set branch protection/rulesets to require review and the applicable CI jobs;
    repository settings have not been inspected or changed by this audit.
+
+## Immediately after making the repository public
+
+Enable private vulnerability reporting and verify the form linked in [SECURITY.md](../SECURITY.md).
 
 ## Before distributing a release
 
@@ -52,9 +55,9 @@ deployment acceptance. Development verification must not exercise live actions.
 ## Privacy audit scope
 
 The audit inspected publishable working-tree source, tests, examples, docs,
-instructions, deployment files and hidden configuration. Available Git history
-contains one reachable commit, `439ab5f`; its tracked contents and author metadata
-were considered. Earlier untracked-tree audits are superseded by this scope.
+instructions, deployment files and hidden configuration. At revision `99cd958`,
+the follow-up privacy review covered 68 tracked files, 117 distinct file contents,
+and the author and committer metadata of all three reachable commits.
 
 No apparent live credentials, operator inventory, private hostnames or personal
 paths were found in publication files. Tests deliberately use fake tokens/IDs and

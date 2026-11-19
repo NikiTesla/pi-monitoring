@@ -3,6 +3,7 @@
 GO ?= go
 CONFIG ?= ./config.yaml
 CHECK_ID ?=
+ADOPT_SERVICE_ACCOUNT ?= 0
 
 .PHONY: help build init validate start run check version test vet race fmt install-service start-service restart-service install-reboot-policy
 
@@ -44,6 +45,17 @@ check: build
 version: build
 	./bin/pi-monitor version
 
+# Stage on the destination filesystem so activation is a single rename.
+define install_validated_binary
+set -eu; \
+candidate=$$(sudo mktemp /usr/local/bin/.pi-monitor.XXXXXXXX); \
+trap 'sudo rm -f -- "$$candidate"' EXIT; \
+trap 'exit 1' HUP INT TERM; \
+sudo install -o root -g root -m 0755 bin/pi-monitor "$$candidate"; \
+sudo -u pi-monitor "$$candidate" validate --config /etc/pi-monitor/config.yaml; \
+sudo mv -fT -- "$$candidate" /usr/local/bin/pi-monitor
+endef
+
 # Keep deployment separate from starting monitoring, which can contact Telegram.
 install-service: build
 	@test -d /run/systemd/system || { printf '%s\n' 'A Linux host running systemd is required.' >&2; exit 1; }
@@ -59,7 +71,12 @@ install-service: build
 	  { printf '%s\n' 'Existing service unit differs. Review and merge deploy/pi-monitor.service manually before retrying.' >&2; exit 1; }; \
 	fi
 	@if ! sudo test -f /etc/pi-monitor/config.yaml; then ./bin/pi-monitor validate --config "$(CONFIG)"; fi
-	@if ! id -u pi-monitor >/dev/null 2>&1; then sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin pi-monitor; fi
+	@set -e; set --; \
+	if ! id -u pi-monitor >/dev/null 2>&1; then \
+	  sudo useradd --system --user-group --no-create-home --shell /usr/sbin/nologin pi-monitor; \
+	  set -- --adopt; \
+	elif [ "$(ADOPT_SERVICE_ACCOUNT)" = 1 ]; then set -- --adopt; fi; \
+	sh scripts/check-service-account.sh "$$@"
 	sudo install -d -o root -g pi-monitor -m 0750 /etc/pi-monitor
 	@if ! sudo test -e /etc/pi-monitor/config.yaml; then sudo install -o root -g pi-monitor -m 0640 "$(CONFIG)" /etc/pi-monitor/config.yaml; fi
 	sudo chown root:pi-monitor /etc/pi-monitor/config.yaml
@@ -70,8 +87,7 @@ install-service: build
 	  sudo install -o pi-monitor -g pi-monitor -m 0600 "$$secrets_path" /etc/pi-monitor/secrets.env; \
 	fi
 	@if sudo test -e /etc/pi-monitor/secrets.env; then sudo chown pi-monitor:pi-monitor /etc/pi-monitor/secrets.env && sudo chmod 0600 /etc/pi-monitor/secrets.env; fi
-	sudo install -o root -g root -m 0755 bin/pi-monitor /usr/local/bin/pi-monitor
-	sudo -u pi-monitor /usr/local/bin/pi-monitor validate --config /etc/pi-monitor/config.yaml
+	$(install_validated_binary)
 	sudo install -o root -g root -m 0644 deploy/pi-monitor.service /etc/systemd/system/pi-monitor.service
 	sudo systemctl daemon-reload
 	sudo systemctl enable pi-monitor.service
@@ -84,14 +100,14 @@ start-service:
 restart-service: build
 	@test -d /run/systemd/system || { printf '%s\n' 'A Linux host running systemd is required.' >&2; exit 1; }
 	sudo systemctl cat pi-monitor.service >/dev/null
-	sudo install -o root -g root -m 0755 bin/pi-monitor /usr/local/bin/pi-monitor
-	sudo -u pi-monitor /usr/local/bin/pi-monitor validate --config /etc/pi-monitor/config.yaml
+	$(install_validated_binary)
 	sudo systemctl restart pi-monitor.service
 
 # Explicit opt-in; the ordinary service installation grants no reboot policy.
 install-reboot-policy:
 	@test -d /run/systemd/system && test -x /usr/bin/systemctl || { printf '%s\n' 'A Linux host running systemd is required.' >&2; exit 1; }
-	@id -u pi-monitor >/dev/null 2>&1 || { printf '%s\n' 'Install the pi-monitor service account first.' >&2; exit 1; }
+	@set --; if [ "$(ADOPT_SERVICE_ACCOUNT)" = 1 ]; then set -- --adopt; fi; \
+	sh scripts/check-service-account.sh "$$@"
 	sudo test -d /etc/polkit-1/rules.d
 	sudo test ! -L /etc/polkit-1/rules.d
 	sudo test ! -L /etc/polkit-1/rules.d/50-pi-monitor-reboot.rules

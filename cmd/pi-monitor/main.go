@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -84,6 +85,9 @@ func runMonitor(ctx context.Context, args []string, diagnostics io.Writer) int {
 	}
 	if err := monitor.Run(ctx, settings, diagnostics); err != nil {
 		fmt.Fprintln(diagnostics, "run:", err)
+		if errors.Is(err, monitor.ErrInvalidCredentials) {
+			return 2
+		}
 		return 1
 	}
 	return 0
